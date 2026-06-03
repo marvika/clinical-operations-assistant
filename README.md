@@ -1,51 +1,94 @@
-# Technical Case: Clinical Operations Assistant
+# Clinical Operations Assistant
 
-## Overview
+An agentic chat assistant for care coordinators: it interprets intent, plans
+multi-step tool calls over the provided SQLite database, answers questions
+from tool results, and **pauses for human approval before any mutating
+action**. Original case description: [docs/case.md](docs/case.md).
 
-Build a small **agentic** "clinical operations assistant" that:
+```text
+React SPA (Vite + assistant-ui) ──SSE──► FastAPI ──► LangGraph agent ──► 13 typed tools ──► database.db
+                                            │             │
+                                            │       SqliteSaver checkpointer (checkpoints.db)
+                                            └── approve/deny ──► Command(resume=…) at the interrupt
+```
 
-- interprets user intent,
-- plans and executes multi-step tool calls,
-- answers coordinator questions from database-backed tool results,
-- and proposes actions that require human approval before execution.
+- **Reads** (9 tools) execute directly; **writes** (4 tools) hit a LangGraph
+  `interrupt()` *before* any side effect and wait for approval.
+- Pending approvals live in the checkpointer — they survive follow-up
+  questions, page refreshes and backend restarts, and are listed in the UI's
+  approval tray until decided.
+- Every tool call is rendered in the transcript with its parameters and
+  result (transparency cards).
+- The clock is frozen at `2025-03-16T09:00:00Z` per the case description
+  (`backend/app/clock.py`).
 
-The provided `database.db` (SQLite) is the only data source you should use, containing a couple of tables with synthetic clinical data.
+Design rationale and trade-offs: **[docs/decisions.md](docs/decisions.md)** ·
+Example sessions: **[docs/transcripts/](docs/transcripts/)**
 
-- Do not change the schema of the database, use as is.
-- You are expected to both read and write rows in the database.
-- During review, we may swap in a different `.db` file with the same schema to verify robustness.
+## Quickstart
 
-In order for this case to be deterministic, assume current date/time is always `2025-03-16T09:00:00Z`.
+Requires the provided `.env` in the repo root (see `.env.example`).
 
-You may use any language/framework and any helper tools, including AI coding assistants and fully LLM-generated code.
+### Native (recommended for development / the live demo)
 
-An API key for the LLM used by your solution will be provided. Details on how it is shared will be provided to shortlisted candidates.
+Prerequisites: [uv](https://docs.astral.sh/uv/), Node 20+.
 
-## Functional Requirements
+```bash
+make backend    # FastAPI + hot reload on http://localhost:8000
+make frontend   # Vite dev server on http://localhost:3000 (proxies /api)
+```
 
-Authentication and authorization are explicitly out of scope for this case. You are not expected to implement login, user/session management, RBAC/permissions, OAuth, end-user API key management, or any other auth mechanism. Integrating a provided LLM API key into the runtime configuration of your solution is sufficient.
+Open <http://localhost:3000> — the three example queries from the case are
+one-click suggestions.
 
-1. Implement an agentic **interactive chat** interface that can be demonstrated live during review (CLI, web interface, or equivalent).
+### Docker
 
-- The interface must support multi-turn follow-up questions in the same session.
-- The interface must support interactive approval decisions (`approve` / `deny`) for pending mutating actions.
+```bash
+docker compose up --build    # web on :3000, api on :8000
+```
 
-2. Implement tool-based retrieval:
+`database.db` is bind-mounted: swap the file and restart to run against a
+different database with the same schema — no rebuild.
 
-- All data must be fetched through tool abstractions.
-- Any mutating action (write/update/delete) must require HITL (Human-in-the-Loop) approval before execution.
-- Read-only operations can execute directly (no HITL required).
-- Provide transparency over which tools were called, with which parameters, and what results were returned.
-- Pending actions should remain addressable in the live interaction so a reviewer can approve/deny them in subsequent turns.
+## Tests
 
-3. Add focused tests where appropriate (unit and/or integration)
+```bash
+make test   # 53 offline tests: unit + integration (scripted LLM, no network)
+make eval   # 10 live-LLM scenario evals against a throwaway db copy (needs .env)
+```
 
-Example queries which should be supported:
+The offline suite covers the full HITL state machine (no write before
+approval, deny, restart survival, multiple pending actions, conflict
+rollback) plus date logic and swapped-database robustness. The evals run the
+real model and assert structure — tools called, interrupts fired, rows
+written, facts present — never exact wording.
 
-- "Which patients are scheduled for appointments in the next 7 days?"
-- "Who has abnormal (HIGH) lab results in the last 14 days?"
-- "Create an appointment for Patricia Adams with Dr. Alice Nguyen next week as a follow-up."
+## Repository layout
 
-## Expected Deliverables
+```text
+backend/app/
+  clock.py            frozen "now" — the only place that knows the time
+  db/                 connection + all SQL (parameterized, quirk-tolerant)
+  domain/resolve.py   name → id resolution (ambiguity is a first-class case)
+  tools/              9 read tools + 4 write tools; WRITE_TOOLS drives the gate
+  agent/              system prompt, model factory, the two-node graph
+  stream/             LangGraph events → AI SDK UI Message Stream (SSE)
+  api/                /api/chat, /api/threads/{id}/state, /api/health
+  tests/              unit / integration / evals
+frontend/src/
+  chat/ChatProvider.tsx      useChat ↔ assistant-ui wiring + approval context
+  components/Thread.tsx      chat surface (headless primitives, own styling)
+  components/ToolCallCard.tsx  per-tool transparency card
+  components/PendingApprovals.tsx  the approve/deny tray
+docs/                 case text, design decisions, example transcripts
+```
 
-Source code, documentation and example inputs/outputs demonstrating the system's capabilities.
+## Notes for reviewers
+
+- The provided `database.db` schema is never modified; LangGraph checkpoints
+  live in a separate, gitignored `checkpoints.db` (`make clean` resets it).
+- Of the two provided models, `gpt-5.2-chat` does not reliably support tool
+  calling on Azure, so the agent runs on `gpt-4.1-mini` — see
+  [docs/decisions.md §5](docs/decisions.md).
+- To demonstrate restart persistence: create a booking, leave it pending,
+  restart `make backend`, refresh the browser — the approval tray returns.

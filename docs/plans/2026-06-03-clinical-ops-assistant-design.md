@@ -1,5 +1,9 @@
 # Clinical Operations Assistant — Implementation Plan
 
+> **Note (as built).** Two details changed during implementation:
+> 1. "Next week" from the frozen Sunday 2025-03-16 is **Mon 2025-03-17 – Sun 2025-03-23** (the plan below misstates it as Mar 24–30; the code and tests use the correct window).
+> 2. The Python `assistant-stream` package was dropped — it emits the legacy AI SDK v4 wire format, incompatible with the installed AI SDK v6. The backend implements the documented v6 UI Message Stream protocol directly in `backend/app/stream/datastream.py`. See docs/decisions.md §10.
+
 ## Context
 
 Technical interview case (see `README.md`): build an agentic clinical-operations assistant over a provided SQLite `database.db` (schema frozen; reviewers may swap in a different db with the same schema). Must: interpret intent, plan/execute multi-step tool calls, answer coordinator questions from db-backed tool results, and gate **all mutating actions behind human approval** (approve/deny) that remains addressable across turns. Read-only tools run directly. Full transparency of tool calls (name/params/results). Frozen clock: `2025-03-16T09:00:00Z`. The candidate presents the code live and wants to discuss orchestration-pattern decisions — code clarity is a first-class requirement.
