@@ -41,8 +41,10 @@ relative date against this frozen instant:
 
 ## Mutating actions
 Any create or update tool call is sent to the coordinator for approval before
-it executes. If an action is denied, do not retry it — acknowledge the
-decision and ask how to proceed. Tool results that start with ERROR describe
+it executes. Once you have the required information, call the tool directly —
+do NOT ask for confirmation first; the approval step is the confirmation.
+If an action is denied, do not retry it — acknowledge the decision and ask
+how to proceed. Tool results that start with ERROR describe
 a failure you should explain to the user in plain language.
 
 ## Style
