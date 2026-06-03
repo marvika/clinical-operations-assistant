@@ -152,14 +152,6 @@ def list_service_assignments(
 # --- writes ----------------------------------------------------------------
 
 
-def _commit(conn: sqlite3.Connection) -> None:
-    try:
-        conn.commit()
-    except sqlite3.IntegrityError as exc:  # pragma: no cover - commit-time errors
-        conn.rollback()
-        raise ConflictError(str(exc)) from exc
-
-
 def insert_appointment(
     conn: sqlite3.Connection,
     *,
@@ -182,7 +174,7 @@ def insert_appointment(
     except sqlite3.IntegrityError as exc:
         conn.rollback()
         raise ConflictError(str(exc)) from exc
-    _commit(conn)
+    conn.commit()
     return get_appointment(conn, cursor.lastrowid)  # type: ignore[return-value]
 
 
@@ -204,7 +196,7 @@ def update_appointment(
     except sqlite3.IntegrityError as exc:
         conn.rollback()
         raise ConflictError(str(exc)) from exc
-    _commit(conn)
+    conn.commit()
     return get_appointment(conn, appointment_id)
 
 
@@ -222,7 +214,7 @@ def insert_journal_note(
     except sqlite3.IntegrityError as exc:
         conn.rollback()
         raise ConflictError(str(exc)) from exc
-    _commit(conn)
+    conn.commit()
     return _row(conn.execute("SELECT * FROM journal_notes WHERE note_id = ?", [cursor.lastrowid]))  # type: ignore[return-value]
 
 
@@ -246,7 +238,7 @@ def insert_service_assignment(
     except sqlite3.IntegrityError as exc:
         conn.rollback()
         raise ConflictError(str(exc)) from exc
-    _commit(conn)
+    conn.commit()
     return _row(
         conn.execute(
             "SELECT * FROM service_assignments WHERE assignment_id = ?", [cursor.lastrowid]

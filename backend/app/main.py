@@ -31,6 +31,8 @@ def create_app(graph: Any | None = None) -> FastAPI:
     if graph is not None:
         app.state.graph = graph
 
+    # Both shipped setups are same-origin (Vite dev proxy / nginx both forward
+    # /api), so this only matters if the SPA is served from another host.
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["http://localhost:3000"],

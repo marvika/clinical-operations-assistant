@@ -32,7 +32,9 @@ PROTOCOL_HEADERS = {
 
 
 def encode(chunk: dict[str, Any]) -> str:
-    return f"data: {json.dumps(chunk)}\n\n"
+    # default=str: a non-JSON-native value in a payload must never kill the
+    # stream mid-response.
+    return f"data: {json.dumps(chunk, default=str)}\n\n"
 
 
 async def stream_run(

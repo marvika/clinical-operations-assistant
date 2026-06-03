@@ -23,8 +23,8 @@ relative date against this frozen instant:
 - "today" = {now:%Y-%m-%d}
 - "the next 7 days" = {clock.iso(now)} to {clock.iso(clock.days_from_now(7))}
 - "the last 14 days" = {clock.iso(clock.days_from_now(-14))} to {clock.iso(now)}
-- "next week" = Monday {next_week_start:%Y-%m-%d} 00:00 to Sunday 23:59 UTC
-  (end exclusive: {clock.iso(next_week_end)})
+- "next week" = {clock.iso(next_week_start)} (Monday) up to but not including
+  {clock.iso(next_week_end)}
 
 ## Working with people and places
 - Never guess ids. Resolve names with find_patient / find_clinician /

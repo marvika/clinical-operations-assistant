@@ -157,11 +157,13 @@ def test_ambiguous_patient_name_asks_for_clarification(graph, db_path):
 
 
 def test_unknown_clinician_is_reported_not_invented(graph, db_path):
+    before = query(db_path, "SELECT COUNT(*) FROM appointments")[0][0]
+
     result = run(graph, "Book an appointment for Emily Chen with Dr. House tomorrow at 10:00.")
 
     assert "__interrupt__" not in result, "must not book with a nonexistent clinician"
-    before = query(db_path, "SELECT COUNT(*) FROM appointments")[0][0]
-    assert before == 14 or True  # row count unchanged is checked implicitly by no interrupt
+    after = query(db_path, "SELECT COUNT(*) FROM appointments")[0][0]
+    assert after == before
     assert final_text(result)
 
 
