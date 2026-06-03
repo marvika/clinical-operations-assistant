@@ -1,0 +1,32 @@
+# Reviewer-friendly one-command startup: docker compose up --build
+#
+# database.db is bind-mounted so a reviewer can swap in a different file
+# (same schema) without rebuilding the image.
+services:
+  api:
+    build: ./backend
+    env_file: .env
+    environment:
+      DATABASE_PATH: /data/database.db
+      CHECKPOINT_PATH: /data/checkpoints.db
+    volumes:
+      - ./database.db:/data/database.db
+      - checkpoints:/data
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  web:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  checkpoints:
