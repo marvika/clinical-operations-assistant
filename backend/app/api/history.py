@@ -47,6 +47,9 @@ def _tool_part(call: dict[str, Any], result: ToolMessage | None) -> dict[str, An
     }
     if result is None:
         part["state"] = "input-available"  # still awaiting approval/execution
+    elif result.additional_kwargs.get("hitl_decision") == "denied":
+        part["state"] = "output-available"
+        part["output"] = {"denied": True, "message": str(result.content)}
     elif result.status == "error":
         part["state"] = "output-error"
         part["errorText"] = str(result.content)

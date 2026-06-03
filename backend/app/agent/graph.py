@@ -70,6 +70,10 @@ def build_graph(checkpointer: Any, llm: BaseChatModel | None = None):
                         "Do not retry this action.",
                         name=call["name"],
                         tool_call_id=call["id"],
+                        # Structural marker so the UI can render "denied"
+                        # instead of a normal result (the content above is
+                        # what the model reads).
+                        additional_kwargs={"hitl_decision": "denied"},
                     )
                 )
             else:

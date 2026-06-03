@@ -141,7 +141,8 @@ class TestApprovalOverApi:
             state = (await client.get("/api/threads/t1/state")).json()
 
         output = next(c for c in chunks if c["type"] == "tool-output-available")
-        assert "denied" in str(output["output"]).lower()
+        assert output["output"]["denied"] is True, "denial must be structurally marked"
+        assert "nope" in output["output"]["message"]
         assert state["pending"] == []
 
 

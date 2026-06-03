@@ -171,7 +171,15 @@ class _Emitter:
             # Result of a call announced in an earlier turn (approved resume):
             # re-emit the input so this message carries a complete pair.
             chunks += self._tool_input(message.tool_call_id)
-        if message.status == "error":
+        if message.additional_kwargs.get("hitl_decision") == "denied":
+            chunks.append(
+                {
+                    "type": "tool-output-available",
+                    "toolCallId": message.tool_call_id,
+                    "output": {"denied": True, "message": str(message.content)},
+                }
+            )
+        elif message.status == "error":
             chunks.append(
                 {
                     "type": "tool-output-error",

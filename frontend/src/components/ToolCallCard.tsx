@@ -10,11 +10,15 @@ import { useState } from "react";
 import type { ToolCallMessagePartProps } from "@assistant-ui/react";
 import { useChatContext } from "../chat/ChatProvider";
 
+const wasDenied = (result: unknown): boolean =>
+  typeof result === "object" && result !== null && (result as { denied?: boolean }).denied === true;
+
 const badge = (
   props: ToolCallMessagePartProps,
   decision: "approved" | "denied" | undefined,
 ) => {
   if (props.isError) return { label: "error", className: "bg-red-100 text-red-700" };
+  if (wasDenied(props.result)) return { label: "denied", className: "bg-gray-200 text-gray-600" };
   if (props.result !== undefined) return { label: "done", className: "bg-emerald-100 text-emerald-700" };
   // The decided call's result streams into a later message; mark this one.
   if (decision === "approved") return { label: "approved ↓", className: "bg-emerald-100 text-emerald-700" };
