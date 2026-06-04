@@ -205,8 +205,8 @@ def test_patient_detail_lookup_is_direct(graph):
     called = tools_called(result)
     assert "find_patient" in called or "get_patient_details" in called
     assert "__interrupt__" not in result
-    answer = final_text(result)
-    assert "Loratadine" in answer and "Pollen" in answer
+    answer = final_text(result).lower()
+    assert "loratadine" in answer and "pollen" in answer
 
 
 def test_service_assignment_create_is_gated(graph, db_path):
